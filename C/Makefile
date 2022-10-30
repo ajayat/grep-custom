@@ -1,10 +1,10 @@
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -pedantic -g #-fsanitize=address,undefined
+CFLAGS = -std=c99 -Wall -Wextra -pedantic -g -fsanitize=address,undefined
 
 all: hashmap run
 
-hashmap: multitype.c hashmap.c
-	$(CC) $(CFLAGS) -o hashmap.exe hashmap.c
+hashmap: src/*.h src/*.c
+	$(CC) $(CFLAGS) -o hashmap.exe src/hashmap.c
 
 run:
 	./hashmap.exe

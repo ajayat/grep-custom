@@ -3,6 +3,7 @@
  * variables of different types.
  * https://en.wikipedia.org/wiki/Tagged_union
  */
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -10,12 +11,15 @@
 
 #include "multitype.h"
 
+const int MAX_STRING_LENGTH = 256;
+
+// Public functions
 
 bool multi_is_equal(MultiType m1, MultiType m2) 
 {
-    if (m1.type != m2.type) {
+    if (m1.type != m2.type)
         return false;
-    }
+
     switch (m1.type) {
         case CharType:
             return m1.value.c == m2.value.c;
@@ -26,29 +30,40 @@ bool multi_is_equal(MultiType m1, MultiType m2)
         case PointerType:
             return m1.value.p == m2.value.p;
         default:
-            return false;
+            goto InvalidType;
     }
+    InvalidType:
+        puts("Type of arguments are invalid.");
+        exit(EXIT_FAILURE);
 }
 
-char* multi_to_string(MultiType m, char* buffer) 
+char* multi_to_string(MultiType m) 
 {
     switch (m.type) {
-        case CharType:
-            sprintf(buffer, "%c", m.value.c);
-            break;
-        case StringType:
-            sprintf(buffer, "%s", m.value.s);
-            break;
-        case IntType:
+        case IntType: {
+            static char buffer[21]; // 4-bytes integer can be 20 digits long
             sprintf(buffer, "%d", m.value.i);
-            break;
-        case PointerType:
+            return buffer;
+        }
+        case CharType: {
+            static char buffer[2]; // 1 bit char + null terminator
+            sprintf(buffer, "%c", m.value.c);
+            return buffer;
+        }
+        case StringType:
+            return m.value.s;
+
+        case PointerType: {
+            static char buffer[21]; // Pointer is a 8-bytes integer 
             sprintf(buffer, "%p", m.value.p);
-            break;
+            return buffer;
+        }
         default:
-            sprintf(buffer, "Unknown type");
+            goto InvalidType;
     }
-    return buffer;
+    InvalidType:
+        puts("MultiType value cannot be converted to string");
+        exit(EXIT_FAILURE);
 }
 
 MultiType multi_int(int object) 

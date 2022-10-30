@@ -64,7 +64,7 @@ class NFA:
         while len(queue) > 0:
             q = queue.pop()
             for q_eps in self.__transitions[q].get(EPSILON, set()):
-                if q_eps not in states:
+                if q_eps not in closure:
                     closure.add(q_eps)
                     queue.append(q_eps)
         return closure
