@@ -1,7 +1,7 @@
 #ifndef MULTITYPE_H
 #define MULTITYPE_H
 
-enum TypeTag { CharType, StringType, IntType, PointerType};
+enum TypeTag { CharType, StringType, IntType, PointerType, EmptyType };
 
 union MultiTypeValue { char c; int i; char* s; void* p; };
 
@@ -9,6 +9,8 @@ typedef struct MultiType {
     enum TypeTag type;
     union MultiTypeValue value;
 } MultiType;
+
+const MultiType MULTI_EMPTY = (MultiType){ EmptyType };
 
 extern bool multi_is_equal(MultiType m1, MultiType m2);
 

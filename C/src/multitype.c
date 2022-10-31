@@ -11,8 +11,6 @@
 
 #include "multitype.h"
 
-const int MAX_STRING_LENGTH = 256;
-
 // Public functions
 
 bool multi_is_equal(MultiType m1, MultiType m2) 
@@ -68,20 +66,20 @@ char* multi_to_string(MultiType m)
 
 MultiType multi_int(int object) 
 {
-    return (MultiType){IntType, {.i = object}};
+    return (MultiType){ IntType, { .i = object } };
 }
 
 MultiType multi_char(char object) 
 {
-    return (MultiType){CharType, {.c = object}};
+    return (MultiType){ CharType, { .c = object } };
 }
 
 MultiType multi_string(char* object) 
 {
-    return (MultiType){StringType, {.s = object}};
+    return (MultiType){ StringType, { .s = object } };
 }
 
 MultiType multi_pointer(void* object) 
 {
-    return (MultiType){PointerType, {.p = object}};
+    return (MultiType){ PointerType, {.p = object} };
 }
