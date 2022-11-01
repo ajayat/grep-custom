@@ -4,16 +4,16 @@
 #include <stdbool.h>
 #include "multitype.h"
 
-typedef struct LinkedEntry {
+typedef struct Entry {
     MultiType key;
     MultiType value;
-    struct LinkedEntry* next;
-} LinkedEntry;
+    struct Entry* next;
+} Entry;
 
 typedef struct HashTable {
     int capacity;
     int size;
-    LinkedEntry** array;
+    Entry** array;
 } HashTable;
 
 extern HashTable* hashtable_create(int capacity);

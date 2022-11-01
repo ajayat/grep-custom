@@ -1,13 +1,38 @@
-CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -pedantic -g -fsanitize=address,undefined
+# Compiler options
+CC := gcc
+CFLAGS := -std=c99 -Wall -Wextra -pedantic -g
 
-all: hashmap run
+# Linker options
+LDFLAGS := -lm -fsanitize=address,undefined
 
-hashmap: src/*.h src/*.c
-	$(CC) $(CFLAGS) -o hashmap.exe src/hashmap.c
+# Sources options
+TARGET ?= mygrep.exe
+BUILD_DIR ?= ./build
+SOURCES ?= $(wildcard src/*.c)
+OBJS := $(SOURCES:%.c=$(BUILD_DIR)/%.o)
+
+# Colors options
+GREEN = $(strip \033[0;32m)
+DEFAULT = $(strip \033[0m)
+
+.PHONY: all run clean
+
+all: $(TARGET) clean run
+
+$(TARGET): $(OBJS)
+	@echo "\n$(GREEN)Linking...$(DEFAULT)"
+	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+
+# Rule for building a C source file
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@echo "\n$(GREEN)Compiling $<...$(DEFAULT)"
+	$(CC) $(CFLAGS) -c $< -o $@
 
 run:
-	./hashmap.exe
+	@echo "\n$(GREEN)Running $(TARGET):$(DEFAULT)"
+	@./$(TARGET)
 
 clean:
-	rm -f *.o *.exe
+	@echo "\n$(GREEN)Cleaning...$(DEFAULT)"
+	$(RM) -r $(BUILD_DIR)

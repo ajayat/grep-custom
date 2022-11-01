@@ -6,9 +6,10 @@
  */
 
 #include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <stdio.h>
+#include <stdbool.h>  // bool
+#include <string.h>  // strcmp, strlen
+#include <stdio.h>  // printf
+#include <math.h>  // ceil
 
 #include "hashtable.h"
 #include "multitype.h"
@@ -18,7 +19,7 @@ const int GROWTH_FACTOR = 2;
 
 // Private functions
 
-static inline int hash_int(int capacity, int key) 
+static int hash_int(int capacity, int key) 
 {
     return (int)(capacity * key * 1.61803398875) % capacity;
 }
@@ -32,7 +33,7 @@ static int hash_string(int capacity, char* key)
     return hash;
 }
 
-static int find_bucket(int capacity, MultiType key) 
+static int bucket(int capacity, MultiType key) 
 {
     switch (key.type) {
         case IntType:
@@ -49,30 +50,30 @@ static int find_bucket(int capacity, MultiType key)
         exit(EXIT_FAILURE);
 }
 
-static LinkedEntry* find_entry(LinkedEntry *entry, MultiType key)
+static Entry* find_item(Entry* entries, MultiType key)
 {
-    while (entry != NULL && !multi_is_equal(entry->key, key))
-        entry = entry->next;
+    while (entries != NULL && !multi_is_equal(entries->key, key))
+        entries = entries->next;
 
-    return entry;
+    return entries;
 }
 
-static LinkedEntry* create_entry(MultiType key, MultiType value, LinkedEntry* next)
+static Entry* create_item(MultiType key, MultiType value, Entry* next)
 {
-    LinkedEntry* entry = (LinkedEntry*)malloc(sizeof(LinkedEntry));
-    entry->key = key;
-    entry->value = value;
-    entry->next = next;
-    return entry;
+    Entry* item = (Entry*)malloc(sizeof(Entry));
+    item->key = key;
+    item->value = value;
+    item->next = next;
+    return item;
 }
 
-static void free_entries(LinkedEntry* entry) 
+static void free_entries(Entry* item) 
 {
-    while (entry != NULL) 
+    while (item != NULL) 
     {
-        LinkedEntry* next = entry->next;
-        free(entry);
-        entry = next;
+        Entry* next = item->next;
+        free(item);
+        item = next;
     }
 }
 
@@ -86,7 +87,7 @@ HashTable* hashtable_create(int capacity)
     HashTable* h = (HashTable*)malloc(sizeof(HashTable));
     h->capacity = capacity;
     h->size = 0;
-    h->array = (LinkedEntry**)calloc(h->capacity, sizeof(LinkedEntry*));
+    h->array = (Entry**)calloc(h->capacity, sizeof(Entry*));
     return h;
 
     InvalidCapacity:
@@ -96,19 +97,19 @@ HashTable* hashtable_create(int capacity)
 
 void hashtable_resize(HashTable* h, int new_capacity) 
 {
-    if (new_capacity < h->capacity) {
-        puts("Size must be greater than the number of entries.");
+    if (new_capacity < h->size) {
+        puts("Capacity must be greater than the number of entries.");
         exit(EXIT_FAILURE);
     }
-    LinkedEntry** old_array = h->array;
-    h->array = (LinkedEntry**)calloc(new_capacity, sizeof(LinkedEntry*));
+    Entry** old_array = h->array;
+    h->array = (Entry**)calloc(new_capacity, sizeof(Entry*));
 
     for (int i = 0; i < h->capacity; i++) 
     {
-        for (LinkedEntry* e = old_array[i]; e != NULL; e = e->next)
+        for (Entry* e = old_array[i]; e != NULL; e = e->next)
         {
-            int b = find_bucket(new_capacity, e->key);
-            h->array[b] = create_entry(e->key, e->value, h->array[b]);
+            int b = bucket(new_capacity, e->key);
+            h->array[b] = create_item(e->key, e->value, h->array[b]);
         }
         free_entries(old_array[i]);
     }
@@ -118,22 +119,26 @@ void hashtable_resize(HashTable* h, int new_capacity)
 
 MultiType hashtable_get(HashTable* h, MultiType key)
 {
-    int b = find_bucket(h->capacity, key);
-    LinkedEntry* entry = find_entry(h->array[b], key);
+    int b = bucket(h->capacity, key);
+    Entry* item = find_item(h->array[b], key);
 
-    return (entry == NULL) ? MULTI_EMPTY : entry->value;
+    if (item == NULL) {
+        printf("Key %s not found.", multi_to_string(key));
+        exit(EXIT_FAILURE);
+    }
+    return item->value;
 }
 
 void hashtable_set(HashTable* h, MultiType key, MultiType value)
 {
-    int b = find_bucket(h->capacity, key);
-    LinkedEntry* entry = find_entry(h->array[b], key);
+    int b = bucket(h->capacity, key);
+    Entry* item = find_item(h->array[b], key);
 
-    if (entry == NULL) {
-        h->array[b] = create_entry(key, value, h->array[b]);
+    if (item == NULL) {
+        h->array[b] = create_item(key, value, h->array[b]);
         h->size++;
     } 
-    else entry->value = value;
+    else item->value = value;
 
     if (h->size > LOAD_FACTOR * h->capacity)
         hashtable_resize(h, h->capacity * GROWTH_FACTOR);
@@ -141,26 +146,26 @@ void hashtable_set(HashTable* h, MultiType key, MultiType value)
 
 void hashtable_remove(HashTable* h, MultiType key)
 {
-    int b = find_bucket(h->capacity, key);
-    LinkedEntry** p = &h->array[b];
+    int b = bucket(h->capacity, key);
+    Entry** ptr = &h->array[b];
 
-    while (*p != NULL && !multi_is_equal((*p)->key, key))
-        p = &(*p)->next;
+    while (*ptr != NULL && !multi_is_equal((*ptr)->key, key))
+        ptr = &(*ptr)->next;
 
-    if (*p != NULL) {
-        LinkedEntry* entry = *p;
-        *p = entry->next;
-        free(entry);
+    if (*ptr != NULL) {
+        Entry* item = *ptr;
+        *ptr = item->next;
+        free(item);
         h->size--;
     }
     if (h->size < (1 - LOAD_FACTOR) * h->capacity)
-        hashtable_resize(h, h->capacity / GROWTH_FACTOR);
+        hashtable_resize(h, ceil(h->capacity / GROWTH_FACTOR));
 }
 
 bool hashtable_contains(HashTable* h, MultiType key)
 {
-    int b = find_bucket(h->capacity, key);
-    return find_entry(h->array[b], key) != NULL;
+    int b = bucket(h->capacity, key);
+    return find_item(h->array[b], key) != NULL;
 }
 
 MultiType* hashtable_keys(HashTable* h)
@@ -169,7 +174,7 @@ MultiType* hashtable_keys(HashTable* h)
     int i = 0;
     for (int b = 0; b < h->capacity; b++) 
     {
-        for (LinkedEntry* e = h->array[b]; e != NULL; e = e->next)
+        for (Entry* e = h->array[b]; e != NULL; e = e->next)
             keys[i++] = e->key;
     }
     return keys;
@@ -180,7 +185,7 @@ void hashtable_print(HashTable* h)
     puts("{");
     for (int i = 0; i < h->capacity; i++) 
     {
-        for (LinkedEntry* e = h->array[i]; e != NULL; e = e->next)
+        for (Entry* e = h->array[i]; e != NULL; e = e->next)
             printf("  %s: %s;\n", 
                    multi_to_string(e->key), multi_to_string(e->value));
     }

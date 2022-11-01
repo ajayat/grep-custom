@@ -5,9 +5,9 @@
  */
 
 #include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
+#include <stdio.h>  // for printf, sprintf
+#include <stdbool.h>  // bool
+#include <string.h>  // strcmp
 
 #include "multitype.h"
 
