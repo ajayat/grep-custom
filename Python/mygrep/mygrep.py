@@ -1,10 +1,10 @@
-from typing import TextIO, List, Text
+from typing import TextIO, List
 import sys
 
 from automaton import AutoOccurrences
 
 
-def mygrep(pattern: Text, text: TextIO) -> None:
+def mygrep(pattern: str, text: TextIO) -> None:
     """
     Affiche les lignes de text qui contiennent pattern.
 
@@ -23,7 +23,7 @@ def mygrep(pattern: Text, text: TextIO) -> None:
             print(line, end="")
 
 
-def main(argc: int, argv: List[Text]) -> None:
+def main(argc: int, argv: List[str]) -> None:
     """
     Traitement des arguments de la ligne de commande.
     """

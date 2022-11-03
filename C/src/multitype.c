@@ -1,6 +1,6 @@
 /**
  * Implementation of a multi-type data structure to handle 
- * variables of different types.
+ * variables of different types without using macros. 
  * https://en.wikipedia.org/wiki/Tagged_union
  */
 
@@ -10,8 +10,7 @@
 #include <string.h>  // strcmp
 
 #include "multitype.h"
-
-// Public functions
+#include "hashtable.h"
 
 bool multi_is_equal(MultiType m1, MultiType m2) 
 {
@@ -31,7 +30,7 @@ bool multi_is_equal(MultiType m1, MultiType m2)
             goto InvalidType;
     }
     InvalidType:
-        puts("Type of arguments are invalid.");
+        fprintf(stderr, "Type of arguments are invalid.\n");
         exit(EXIT_FAILURE);
 }
 
@@ -60,26 +59,33 @@ char* multi_to_string(MultiType m)
             goto InvalidType;
     }
     InvalidType:
-        puts("MultiType value cannot be converted to string");
+        fprintf(stderr, "MultiType value cannot be converted to string.\n");
         exit(EXIT_FAILURE);
 }
 
-MultiType multi_int(int object) 
+inline MultiType multi_int(int i) 
 {
-    return (MultiType){ IntType, { .i = object } };
+    return (MultiType){ IntType, { .i = i } };
 }
 
-MultiType multi_char(char object) 
+inline MultiType multi_char(char c) 
 {
-    return (MultiType){ CharType, { .c = object } };
+    return (MultiType){ CharType, { .c = c } };
 }
 
-MultiType multi_string(char* object) 
+inline MultiType multi_string(char* s) 
 {
-    return (MultiType){ StringType, { .s = object } };
+    return (MultiType){ StringType, { .s = s } };
 }
 
-MultiType multi_pointer(void* object) 
+inline MultiType multi_pointer(void* p) 
 {
-    return (MultiType){ PointerType, {.p = object} };
+    return (MultiType){ PointerType, {.p = p } };
+}
+
+/* Multifruit ! ;) */
+void multi_free(MultiType m)
+{
+    if (m.type == PointerType)
+        free(m.value.p);
 }

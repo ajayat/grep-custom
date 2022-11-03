@@ -9,19 +9,19 @@ LDFLAGS := -lm -fsanitize=address,undefined
 TARGET ?= mygrep.exe
 BUILD_DIR ?= ./build
 SOURCES ?= $(wildcard src/*.c)
-OBJS := $(SOURCES:%.c=$(BUILD_DIR)/%.o)
+OBJECTS := $(SOURCES:%.c=$(BUILD_DIR)/%.o)
 
 # Colors options
 GREEN = $(strip \033[0;32m)
 DEFAULT = $(strip \033[0m)
 
+# Commands
 .PHONY: all run clean
-
 all: $(TARGET) clean run
 
-$(TARGET): $(OBJS)
+$(TARGET): $(OBJECTS)
 	@echo "\n$(GREEN)Linking...$(DEFAULT)"
-	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 # Rule for building a C source file
 $(BUILD_DIR)/%.o: %.c
