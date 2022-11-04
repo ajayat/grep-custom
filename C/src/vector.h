@@ -3,7 +3,7 @@
 
 #include "multitype.h"
 
-extern const float VECTOR_GROWTH_FACTOR = 2;
+extern const float VECTOR_GROWTH_FACTOR;
 
 /**
  * Self-resizing array data structure.

@@ -3,23 +3,16 @@
 
 #include <stdbool.h>
 
-#include "hashtable.h"
-
-extern const MultiType MULTI_NULL;
-
 enum TypeTag { CharType, StringType, IntType, PointerType, NullType };
 
-typedef union MultiTypeValue { 
-    char c; 
-    int i; 
-    const char* s; 
-    void* p; 
-} MultiTypeValue;
+union MultiTypeValue { char c; int i; char* s; void* p; };
 
 typedef struct MultiType {
     enum TypeTag type;
-    MultiTypeValue value;
+    union MultiTypeValue value;
 } MultiType;
+
+extern const MultiType MULTI_NULL;
 
 extern bool multi_is_equal(MultiType m1, MultiType m2);
 

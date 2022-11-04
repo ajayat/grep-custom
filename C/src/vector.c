@@ -3,6 +3,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h> // memcpy
 #include <math.h>  // ceil
 #include <stdbool.h>
 #include <stdio.h>
@@ -67,11 +68,10 @@ MultiType vector_pop(Vector* v)
         exit(EXIT_FAILURE);
     }
     MultiType elem = v->array[--v->size];
-    multi_free(v->array[v->size]);
-
+    
     if (v->capacity > VECTOR_GROWTH_FACTOR * v->size)
         vector_resize(v, ceil(v->capacity / VECTOR_GROWTH_FACTOR));
-        
+
     return elem;
 }
 

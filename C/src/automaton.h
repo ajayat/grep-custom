@@ -10,16 +10,15 @@
 extern const char EPSILON;
 
 /**
- * Deterministic Finite Automaton with 1 initial state
+ * Deterministic Finite Automaton
  */
 typedef struct DFA {
-    char* alphabet;
     MultiType initial;
     Set* final;
     HashTable* _transitions; // (state -> letter -> state)
 } DFA;
 
-extern DFA* dfa_create(char* alphabet, MultiType initial);
+extern DFA* dfa_create(MultiType initial);
 
 extern void dfa_set_transition(DFA* dfa, MultiType state, char a, MultiType p);
 
@@ -30,16 +29,15 @@ extern bool dfa_accept(DFA* dfa, char* word);
 extern void dfa_free(DFA* dfa);
 
 /**
- * Non-deterministic Finite Automaton that accepts epsilon transitions
+ * Non-deterministic Finite Automaton with epsilon transitions
  */
 typedef struct NFA {
-    char* alphabet;
     Set* initial;
     Set* final;
     HashTable* _transitions; // (state -> letter -> Set of state)
 } NFA;
 
-extern NFA* nfa_create(char* alphabet);
+extern NFA* nfa_create(void);
 
 extern void nfa_set_transition(NFA* nfa, MultiType state, char a, MultiType p);
 
@@ -48,5 +46,7 @@ extern Set* nfa_delta(NFA* nfa, MultiType state, char a);
 extern bool nfa_accept(NFA* nfa, char* word);
 
 extern void nfa_free(NFA* nfa);
+
+extern DFA* auto_occurrences(char* pattern);
 
 #endif // AUTOMATON_H

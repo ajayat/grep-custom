@@ -165,7 +165,7 @@ bool hashtable_contains(HashTable* h, MultiType key)
 
 Vector* hashtable_to_vector(HashTable* h)
 {
-    Vector* v_keys = create_vector(h->size);
+    Vector* v_keys = vector_create(h->size);
     for (int b = 0; b < h->capacity; b++) 
     {
         for (Entry* e = h->array[b]; e != NULL; e = e->next)

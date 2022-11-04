@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "multitype.h"
+#include "vector.h"
 
 extern const float HASHTABLE_LOAD_FACTOR;
 extern const float HASHTABLE_GROWTH_FACTOR;
@@ -35,7 +36,7 @@ extern HashTable* hashtable_get_or_create(HashTable* h, MultiType key);
 
 extern void hashtable_remove(HashTable* h, MultiType key);
 
-extern MultiType* hashtable_keys(HashTable* h);
+extern Vector* hashtable_to_vector(HashTable* h);
 
 extern HashTable* hashtable_copy(HashTable* h);
 

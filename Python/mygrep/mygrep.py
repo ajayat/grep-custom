@@ -12,15 +12,7 @@ def mygrep(pattern: str, text: TextIO) -> None:
         pattern: la chaîne à chercher
         text: le texte à lire
     """
-    auto = AutoOccurrences(pattern)
-    # On modifie les transitions partant de l'état final
-    for a in auto.alphabet:
-        auto.set_transition(pattern, a, pattern)
-
-    # On peut désormais rechercher le motif
-    for line in text:
-        if auto.accept(line):
-            print(line, end="")
+    pass
 
 
 def main(argc: int, argv: List[str]) -> None:

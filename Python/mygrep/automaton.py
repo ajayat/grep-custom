@@ -99,25 +99,3 @@ class NFA:
                     stack.append(p)
                 dfa.transitions[state][a] = p
         return dfa
-
-
-class AutoOccurrences(DFA):
-    """
-    Représente l'automate des occurrences associé à un motif.
-    """
-
-    def __init__(self, pattern: str):
-        self.pattern = pattern
-        super().__init__(ASCII_ALPHABET, {EPSILON}, {pattern}, defaultdict(dict))
-        self.__create_transitions()
-
-    def __create_transitions(self) -> None:
-        for i in range(1, len(self.pattern) + 1):
-            p = self.pattern[:i]
-            for a in self.alphabet:
-                self.set_transition(p, a, self.__longest_suffix(p + a))
-
-    def __longest_suffix(self, word: str) -> str:
-        if word in self.states:
-            return word
-        return self.__longest_suffix(word[1:])
