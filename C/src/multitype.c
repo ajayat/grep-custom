@@ -12,6 +12,8 @@
 #include "multitype.h"
 #include "hashtable.h"
 
+const MultiType MULTI_NULL = { NullType, { .p = NULL } };
+
 bool multi_is_equal(MultiType m1, MultiType m2) 
 {
     if (m1.type != m2.type)
@@ -81,11 +83,4 @@ inline MultiType multi_string(char* s)
 inline MultiType multi_pointer(void* p) 
 {
     return (MultiType){ PointerType, {.p = p } };
-}
-
-/* Multifruit ! ;) */
-void multi_free(MultiType m)
-{
-    if (m.type == PointerType)
-        free(m.value.p);
 }

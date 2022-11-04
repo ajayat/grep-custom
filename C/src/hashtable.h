@@ -5,6 +5,12 @@
 
 #include "multitype.h"
 
+extern const float HASHTABLE_LOAD_FACTOR;
+extern const float HASHTABLE_GROWTH_FACTOR;
+
+/**
+ * Key-value pair backed by a linked list.
+ */
 typedef struct Entry {
     MultiType key;
     MultiType value;
@@ -25,8 +31,7 @@ extern bool hashtable_contains(HashTable* h, MultiType key);
 
 extern MultiType hashtable_get(HashTable* h, MultiType key);
 
-extern MultiType hashtable_get_default(HashTable* h, MultiType key, 
-                                       MultiType default_value);
+extern HashTable* hashtable_get_or_create(HashTable* h, MultiType key);
 
 extern void hashtable_remove(HashTable* h, MultiType key);
 
@@ -41,21 +46,8 @@ extern void hashtable_print(HashTable* h);
 extern void hashtable_free(HashTable* h);
 
 /**
- * Double hashtable is a hashtable of hashtables.
- */
-typedef HashTable DoubleHashTable;
-
-extern HashTable* double_hashtable_get(DoubleHashTable* h, MultiType key);
-
-/**
  * Set data type is an hashmap with keys equals to values.
  */
 typedef HashTable Set;
 
-extern void set_add(Set* s, MultiType elem);
-
-extern void set_print(Set* s);
-
-extern bool set_is_subset(Set* s1, Set* s2);
-
-#endif // HASHTABLE_HS
+#endif // HASHTABLE_H

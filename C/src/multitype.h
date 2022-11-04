@@ -5,7 +5,9 @@
 
 #include "hashtable.h"
 
-enum TypeTag { CharType, StringType, IntType, PointerType };
+extern const MultiType MULTI_NULL;
+
+enum TypeTag { CharType, StringType, IntType, PointerType, NullType };
 
 typedef union MultiTypeValue { 
     char c; 

@@ -8,11 +8,45 @@
 #include <string.h>
 
 #include "automaton.h"
-#include "linkedlist.h"
+#include "vector.h"
 #include "multitype.h"
 #include "hashtable.h"
 
-const EPSILON = '\0';
+const char EPSILON = '\0';
+const int HT_INIT_SIZE = 2;
+
+static const Set* ascii_alphabet(void)
+{
+    const Set* alphabet = set_create(128 * (float)(1 / HASHTABLE_LOAD_FACTOR));
+    for (int i = 0; i < 128; i++) {
+        MultiType elem = multi_char((char)i);
+        hashtable_add(alphabet, elem, elem);
+    }
+    return alphabet;
+}
+
+/* Creates a Deterministic Finite Automaton */
+DFA* dfa_create(char* alphabet, MultiType initial)
+{
+    DFA* dfa = (DFA*)malloc(sizeof(DFA));
+    dfa->alphabet = alphabet;
+    dfa->initial = initial;
+    dfa->final = hashtable_create(HT_INIT_SIZE);
+    dfa->_transitions = hashtable_create(HT_INIT_SIZE);
+    return dfa;
+}
+
+void dfa_set_transition(DFA* dfa, MultiType state, char a, MultiType p)
+{
+    HashTable* h = hashtable_get_or_create(dfa->_transitions, state);
+    hashtable_set(h, multi_char(a), p);
+}
+
+MultiType dfa_delta(DFA* dfa, MultiType state, char a)
+{
+    HashTable* h = hashtable_get_or_create(dfa->_transitions, state);
+    return hashtable_get(h, multi_char(a));
+}
 
 static MultiType dfa_delta_star(DFA* dfa, MultiType state, char* u)
 {
@@ -22,115 +56,99 @@ static MultiType dfa_delta_star(DFA* dfa, MultiType state, char* u)
     return state;
 }
 
-static Set* nfa_epsilon_closure(NFA* nfa, Set* states, char a)
-{
-    Set* closure = hashtable_copy(states);
-    Stack* stack = stack_from_set(closure);
-
-    while (!stack_is_empty(stack))
-    {
-        MultiType q = stack_pop(stack);
-        HashTable* q_trans = double_hashtable_get(nfa->_transitions, q);
-
-        if (!hashtable_contains(q_trans, multi_char(EPSILON)))
-            continue;
-        // Add to closure all states instantly accessible from q 
-        Set* q_closure = double_hashtable_get(q_trans, multi_char(EPSILON));
-        MultiType* q_closure_elems = hashtable_keys(q_closure);
-
-        for (int i = 0; i < q_closure->size; i++)
-        {
-            if (set_contains(closure, q_closure_elems[i]))
-                continue;
-            stack_push(stack, q_closure_elems[i]);
-            set_add(closure, q_closure_elems[i]);
-        }
-        free(q_closure_elems);
-    }
-    stack_free(stack);
-    return closure;
-}
-
-static Set* nfa_delta_states(NFA* nfa, Set* states, char a)
-{
-    Set* next_states = nfa_epsilon_closure(nfa, states, a);
-    MultiType* states_elems = hashtable_keys(states);
-
-    for (int i = 0; i < states->size; i++)
-        hashtable_update(next_states, nfa_delta(nfa, states_elems[i], a));
-
-    free(states_elems);
-    return next_states;
-}
-
-static Set* nfa_delta_star(DFA* dfa, Set* states, char* u)
-{
-    for (int i = 0; u[i] != '\0'; i++)
-        states = nfa_delta_states(dfa, states, u[i]);
-        
-    return states;
-}
-
-DFA* dfa_create(char* alphabet, Set* states, MultiType initial, 
-                Set* final, DoubleHashTable* transitions)
-{
-    DFA* dfa = (DFA*)malloc(sizeof(DFA));
-    dfa->alphabet = alphabet;
-    dfa->states = states;
-    dfa->initial = initial;
-    dfa->final = final;
-    dfa->_transitions = transitions;
-    return dfa;
-}
-
-void dfa_set_transition(DFA* dfa, MultiType state, char a, MultiType p)
-{
-    if (hashtable_contains(dfa->_transitions, state)) {
-        HashTable* h = double_hashtable_get(dfa->_transitions, state);
-        hashtable_set(h, multi_char(a), p);
-    } else {
-        HashTable* h = hashtable_create(2);
-        hashtable_set(h, multi_char(a), p);
-        hashtable_set(dfa->_transitions, state, multi_pointer(h));
-    }
-}
-
-MultiType dfa_delta(DFA* dfa, MultiType state, char a)
-{
-    HashTable* h = double_hashtable_get(dfa->_transitions, state);
-    return hashtable_get(h, multi_char(a));
-}
-
 bool dfa_accept(DFA* dfa, char* u)
 {
     MultiType state = dfa_delta_star(dfa, dfa->initial, u);
     return hashtable_contains(dfa->final, state);
 }
 
-NFA* dfa_create(char* alphabet, Set* states, Set* initial, 
-                Set* final, DoubleHashTable* transitions)
+/* Creates a Non-deterministic Finite Automaton */
+NFA* nfa_create(char* alphabet)
 {
     NFA* nfa = (NFA*)malloc(sizeof(NFA));
     nfa->alphabet = alphabet;
-    nfa->states = states;
-    nfa->initial = initial;
-    nfa->final = final;
-    nfa->_transitions = transitions;
+    nfa->initial = hashtable_create(HT_INIT_SIZE);
+    nfa->final = hashtable_create(HT_INIT_SIZE);
+    nfa->_transitions = hashtable_create(HT_INIT_SIZE);
     return nfa;
+}
+
+void nfa_set_transition(NFA* nfa, MultiType state, char a, MultiType p)
+{
+    HashTable* h = hashtable_get_or_create(nfa->_transitions, state);
+    Set* states = hashtable_get_or_create(h, a);
+    hashtable_add(states, p, p);
+    hashtable_set(h, multi_char(a), states);
+}
+
+Set* nfa_delta(NFA* nfa, MultiType state, char a)
+{
+    HashTable* h = hashtable_get_or_create(nfa->_transitions, state);
+    return hashtable_get_or_create(h, multi_char(a));
+}
+
+static Set* nfa_epsilon_closure(NFA* nfa, Set* states)
+{   
+    Set* closure = hashtable_copy(states);
+    Vector* stack = hashtable_to_vector(states);
+
+    while (stack->size > 0)
+    {
+        MultiType q = vector_pop(stack);
+        if (!hashtable_contains(closure, q))
+            continue;
+
+        hashtable_add(closure, q, q);
+        vector_extend(stack, hashtable_to_vector(nfa_delta(nfa, q, EPSILON)));
+    }
+    vector_free(stack);
+    return closure;
+}
+
+static Set* nfa_delta_states(NFA* nfa, Set* states, char a)
+{
+    Set* next_states = hashtable_create(HT_INIT_SIZE);
+    Vector* v_states = hashtable_to_vector(states);
+
+    for (int i = 0; i < states->size; i++)
+        hashtable_update(next_states, nfa_delta(nfa, v_states->array[i], a));
+
+    Set* closure = nfa_epsilon_closure(nfa, next_states);
+    vector_free(v_states);
+    hashtable_free(next_states);
+    return closure;
+}
+
+static Set* nfa_delta_star(DFA* dfa, Set* states, char* u)
+{
+    for (int i = 0; u[i] != '\0'; i++)
+    {
+        Set* states_temp = nfa_delta_states(dfa, states, u[i]);
+        hashtable_free(states);
+        states = states_temp;
+    }
+    return states;
+}
+
+bool nfa_is_final(NFA* nfa, Set* states)
+{
+    bool is_final = false;
+    Vector* v_states = hashtable_to_vector(states);
+    for (int i = 0; i < states->size; i++) 
+    {
+        if (set_contains(nfa->final, v_states[i]))
+            is_final = true;
+    }
+    vector_free(v_states);
+    return is_final;
 }
 
 bool nfa_accept(NFA* nfa, char* u)
 {
-    Set* states = nfa_delta_star(nfa, nfa->initial, u);
-    MultiType* states_elems = hashtable_keys(states);
-    bool accept = false;
-
-    for (int i = 0; i < states->size; i++) 
-    {
-        if (set_contains(nfa->final, states_elems[i]))
-            accept = true;
-    }
-    free(states_elems);
-    set_free(states);
+    Set* initial_closure = nfa_epsilon_closure(nfa, nfa->initial);
+    Set* states = nfa_delta_star(nfa, initial_closure, u);
+    bool accept = nfa_is_final(nfa, states);
+    hashtable_free(initial_closure);
+    hashtable_free(states);
     return accept;
 }

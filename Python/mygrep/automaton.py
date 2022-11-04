@@ -1,16 +1,15 @@
-from typing import Set, Dict
+from typing import List, Dict, Union, Optional, Set
 
 import string
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
 
-Letter = str
-State = Letter
-States = Set[State]
+State = Union[str, int]
 
-EPSILON: Letter = str()  # représente le mot vide
-ASCII_ALPHABET: str = set(string.printable)
+EPSILON: str = str()  # représente le mot vide
+ASCII_ALPHABET: List[str] = set(string.printable)
+EMPTY_STATE: State = None
 
 
 @dataclass
@@ -20,16 +19,15 @@ class DFA:
     """
 
     alphabet: str
-    states: States
     initial: State
-    final: States
-    __transitions: Dict[State, Dict[Letter, State]]
+    final: Set[State]
+    __transitions: Dict[State, Dict[str, State]]
 
-    def set_transition(self, q: State, a: Letter, p: State) -> None:
+    def set_transition(self, q: State, a: str, p: State) -> None:
         self.__transitions[q][a] = p
 
-    def delta(self, q: State, a: Letter) -> State:
-        return self.__transitions[q].get(a, State())
+    def delta(self, q: State, a: str) -> State:
+        return self.__transitions[q].get(a, EMPTY_STATE)
 
     def _delta_star(self, q: State, u: str) -> State:
         for c in u:
@@ -47,41 +45,60 @@ class NFA:
     """
 
     alphabet: str
-    states: States
-    initial: States
-    final: States
-    __transitions: Dict[State, Dict[Letter, States]]
+    initial: Set[State]
+    final: Set[State]
+    __transitions: Dict[State, Dict[str, Set[State]]]
 
-    def set_transition(self, q: State, a: Letter, p: State) -> None:
+    def set_transition(self, q: State, a: str, p: State) -> None:
         self.__transitions[q][a] = self.__transitions[q].get(a, set()) | {p}
 
-    def _epsilon_closure(self, states: States) -> States:
-        queue = deque(states)  # stack for DFS
+    def delta(self, q: State, a: str) -> Set[State]:
+        return self.__transitions[q].get(a, set())
+
+    def _epsilon_closure(self, states: Set[State]) -> Set[State]:
         closure = states.copy()
-        while len(queue) > 0:
-            q = queue.pop()
-            for q_eps in self.__transitions[q].get(EPSILON, set()):
-                if q_eps not in closure:
-                    closure.add(q_eps)
-                    queue.append(q_eps)
+        stack = deque(states)
+        while len(stack) > 0:
+            q = stack.pop()
+            if q not in closure:
+                closure.add(q)
+                stack.extend(self.delta(q, EPSILON))
         return closure
 
-    def delta(self, q: State, a: Letter) -> States:
-        return self.__transitions[q].get(a, set()) | self._epsilon_closure({q})
-
-    def _delta_states(self, states: States, a: Letter) -> States:
-        next_states = self._epsilon_closure(states)
+    def _delta_states(self, states: Set[State], a: str) -> Set[State]:
+        next_states = set()
         for q in states:
             next_states |= self.delta(q, a)
-        return next_states
+        return self._epsilon_closure(next_states)
 
-    def _delta_star(self, states: States, u: str) -> States:
+    def _delta_star(self, states: Set[State], u: str) -> Set[State]:
         for c in u:
             states = self._delta_states(states, c)
         return states
 
+    def _is_final(self, states: Set[State]) -> bool:
+        return any(q in self.final for q in states)
+
     def accept(self, u: str) -> bool:
-        return len(self.final & self._delta_star(self.initial, u)) > 0
+        states = self._delta_star(self._epsilon_closure(self.initial), u)
+        return self._is_final(states)
+
+    def determinize(self) -> DFA:
+        dfa = DFA(self.alphabet, set(), set(), set(), defaultdict(dict))
+        dfa.initial = self._epsilon_closure(self.initial)
+
+        stack = deque([dfa.initial])
+        while len(stack) > 0:
+            state = stack.pop()
+            if self._is_final(state):
+                dfa.final.add(state)
+
+            for a in self.alphabet:
+                p = self._delta_states(state, a)
+                if p not in dfa.__transitions:
+                    stack.append(p)
+                dfa.transitions[state][a] = p
+        return dfa
 
 
 class AutoOccurrences(DFA):
@@ -91,18 +108,12 @@ class AutoOccurrences(DFA):
 
     def __init__(self, pattern: str):
         self.pattern = pattern
-        super().__init__(
-            ASCII_ALPHABET, {EPSILON}, {EPSILON}, {pattern}, defaultdict(dict)
-        )
-        self.__create_states()
+        super().__init__(ASCII_ALPHABET, {EPSILON}, {pattern}, defaultdict(dict))
         self.__create_transitions()
 
-    def __create_states(self) -> None:
-        for i in range(1, len(self.pattern) + 1):
-            self.states.add(self.pattern[:i])
-
     def __create_transitions(self) -> None:
-        for p in self.states:
+        for i in range(1, len(self.pattern) + 1):
+            p = self.pattern[:i]
             for a in self.alphabet:
                 self.set_transition(p, a, self.__longest_suffix(p + a))
 

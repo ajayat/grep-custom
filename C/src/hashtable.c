@@ -13,10 +13,10 @@
 
 #include "hashtable.h"
 #include "multitype.h"
-#include "linkedlist.h"
+#include "vector.h"
 
-const double LOAD_FACTOR = 0.75;
-const int GROWTH_FACTOR = 2;
+const float HASHTABLE_LOAD_FACTOR = 0.75;
+const float HASHTABLE_GROWTH_FACTOR = 2;
 
 static inline int hash_int(int capacity, int key) 
 {
@@ -71,8 +71,6 @@ static void free_entries(Entry* entry)
     while (entry != NULL) 
     {
         Entry* next = entry->next;
-        multi_free(entry->key);
-        multi_free(entry->value);
         free(entry);
         entry = next;
     }
@@ -81,7 +79,7 @@ static void free_entries(Entry* entry)
 static void hashtable_resize(HashTable* h, int new_capacity) 
 {
     if (new_capacity < h->size) {
-        fprintf(stderr, "Capacity must be greater than the hashtable size.\n");
+        fprintf(stderr, "Capacity must be greater than hashtable size.\n");
         exit(EXIT_FAILURE);
     }
     Entry** old_array = h->array;
@@ -102,35 +100,31 @@ static void hashtable_resize(HashTable* h, int new_capacity)
 
 HashTable* hashtable_create(int capacity)
 {
-    if (capacity < 0)
-        goto InvalidCapacity;
-
+    if (capacity < 0) {
+        fprintf(stderr, "Capacity must be a positive integer. \n");
+        exit(EXIT_FAILURE);
+    }
     HashTable* h = (HashTable*)malloc(sizeof(HashTable));
     h->capacity = capacity;
     h->size = 0;
-    h->array = (Entry**)calloc(h->capacity, sizeof(Entry*));
+    h->array = (Entry**)calloc(capacity, sizeof(Entry*));
     return h;
-
-    InvalidCapacity:
-        fprintf(stderr, "Capacity must be a positive integer. \n");
-        exit(EXIT_FAILURE);
 }
 
 MultiType hashtable_get(HashTable* h, MultiType key)
 {
-    int b = bucket(h->capacity, key);
-    Entry* entry = find_entry(h->array[b], key);
-
-    if (entry == NULL) {
-        fprintf(stderr, "Key %s not found.\n", multi_to_string(key));
-        exit(EXIT_FAILURE);
-    }
-    return entry->value;
+    Entry* entry = find_entry(h->array[bucket(h->capacity, key)], key);
+    return (entry == NULL) ? MULTI_NULL : entry->value;
 }
 
-HashTable* double_hashtable_get(DoubleHashTable* h, MultiType key)
+HashTable* hashtable_get_or_create(HashTable* h, MultiType key)
 {
-    return (HashTable*)hashtable_get(h, key).value.p;
+    MultiType entry = hashtable_get(h, key);
+    if (entry.type == NullType) {
+        entry.value.p = hashtable_create(2);
+        hashtable_set(h, key, entry);
+    }
+    return (HashTable*)entry.value.p;
 }
 
 void hashtable_set(HashTable* h, MultiType key, MultiType value)
@@ -144,15 +138,13 @@ void hashtable_set(HashTable* h, MultiType key, MultiType value)
     } 
     else entry->value = value;
 
-    if (h->size > LOAD_FACTOR * h->capacity)
-        hashtable_resize(h, h->capacity * GROWTH_FACTOR);
+    if (h->size > HASHTABLE_LOAD_FACTOR * h->capacity)
+        hashtable_resize(h, ceil(h->capacity * HASHTABLE_GROWTH_FACTOR));
 }
 
 void hashtable_remove(HashTable* h, MultiType key)
 {
-    int b = bucket(h->capacity, key);
-    Entry** ptr = &h->array[b];
-
+    Entry** ptr = &h->array[bucket(h->capacity, key)];
     while (*ptr != NULL && !multi_is_equal((*ptr)->key, key))
         ptr = &(*ptr)->next;
 
@@ -162,26 +154,24 @@ void hashtable_remove(HashTable* h, MultiType key)
         free(entry);
         h->size--;
     }
-    if (h->size < (1 - LOAD_FACTOR) * h->capacity)
-        hashtable_resize(h, ceil(h->capacity / GROWTH_FACTOR));
+    if (h->size < (1 - HASHTABLE_LOAD_FACTOR) * h->capacity)
+        hashtable_resize(h, ceil(h->capacity / HASHTABLE_GROWTH_FACTOR));
 }
 
 bool hashtable_contains(HashTable* h, MultiType key)
 {
-    int b = bucket(h->capacity, key);
-    return find_entry(h->array[b], key) != NULL;
+    return hashtable_get(h, key).type != NullType;
 }
 
-MultiType* hashtable_keys(HashTable* h)
+Vector* hashtable_to_vector(HashTable* h)
 {
-    MultiType* keys = (MultiType*)malloc(h->size * sizeof(MultiType));
-    int i = 0;
+    Vector* v_keys = create_vector(h->size);
     for (int b = 0; b < h->capacity; b++) 
     {
         for (Entry* e = h->array[b]; e != NULL; e = e->next)
-            keys[i++] = e->key;
+            vector_push(v_keys, e->key);
     }
-    return keys;
+    return v_keys;
 }
 
 void hashtable_update(HashTable* h, HashTable* other)
@@ -205,14 +195,12 @@ void hashtable_print(HashTable* h)
     puts("}");
 }
 
+/* Performs a shallow copy */
 HashTable* hashtable_copy(HashTable* h)
 {
     HashTable* h_copy = hashtable_create(h->capacity);
-    for (int i = 0; i < h->capacity; i++) 
-    {
-        for (Entry* e = h->array[i]; e != NULL; e = e->next)
-            hashtable_set(h_copy, e->key, e->value);
-    }
+    h_copy->size = h->size;
+    memcpy(h_copy->array, h->array, h->capacity * sizeof(Entry*));
     return h_copy;
 }
 
@@ -225,31 +213,4 @@ void hashtable_free(HashTable* h)
     }
     free(h->array);
     free(h);
-}
-
-inline void set_add(Set* s, MultiType elem)
-{
-    hashtable_set(s, elem, elem);
-}
-
-void set_print(Set* s)
-{
-    printf("{ ");
-    for (int i = 0; i < s->capacity; i++) 
-    {
-        for (Entry* e = s->array[i]; e != NULL; e = e->next)
-            printf("%s; ", multi_to_string(e->key));
-    }
-    printf("}\n");
-}
-
-bool set_is_subset(Set* s1, Set* s2)
-{
-    for (int i = 0; i < s1->capacity; i++) 
-    {
-        for (Entry* e = s1->array[i]; e != NULL; e = e->next)
-            if (!set_contains(s2, e->key))
-                return false;
-    }
-    return true;
 }
