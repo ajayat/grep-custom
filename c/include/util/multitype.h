@@ -1,11 +1,17 @@
+
 #ifndef MULTITYPE_H
 #define MULTITYPE_H
 
 #include <stdbool.h>
 
-enum TypeTag { CharType, StringType, IntType, PointerType, NullType };
+enum TypeTag { CharType, StringType, IntType, PointerType, HtblType, NullType };
 
-union MultiTypeValue { char c; int i; char* s; void* p; };
+union MultiTypeValue {
+    char c;
+    int i;
+    char* s;
+    void* p;
+};
 
 typedef struct MultiType {
     enum TypeTag type;
@@ -24,11 +30,15 @@ extern MultiType multi_char(char object);
 
 extern MultiType multi_string(char* object);
 
+extern MultiType multi_htbl(void* object);
+
 extern MultiType multi_pointer(void* object);
 
-#if __STDC_VERSION__ >= 201112L //  C11 support
-    // _Generic is a C11 feature
-    #define multi(object) _Generic((object), \
+extern void multi_free(MultiType m);
+
+#if __STDC_VERSION__ >= 201112L  //  C11 support
+// _Generic is a C11 feature
+#define multi(object) _Generic((object), \
         int: multi_int, \
         char: multi_char, \
         char*: multi_string, \
@@ -36,4 +46,4 @@ extern MultiType multi_pointer(void* object);
     )((object))
 #endif
 
-#endif // MULTITYPE_H
+#endif  // MULTITYPE_H

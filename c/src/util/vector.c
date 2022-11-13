@@ -2,19 +2,20 @@
  * Implements a one-way linked list, stack and vector data structures.
  */
 
-#include <stdlib.h>
-#include <string.h> // memcpy
+#include "vector.h"
+
 #include <math.h>  // ceil
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>  // memcpy
 
-#include "multitype.h"
 #include "hashtable.h"
-#include "vector.h"
+#include "multitype.h"
 
 const float VECTOR_GROWTH_FACTOR = 2;
 
-static void vector_resize(Vector* v, int new_capacity) 
+static void vector_resize(Vector* v, int new_capacity)
 {
     if (new_capacity < v->size) {
         fprintf(stderr, "Capacity must be greater than vector size.\n");
@@ -24,7 +25,7 @@ static void vector_resize(Vector* v, int new_capacity)
     v->capacity = new_capacity;
 }
 
-Vector* vector_create(int capacity) 
+Vector* vector_create(int capacity)
 {
     if (capacity < 0) {
         fprintf(stderr, "Capacity must be a positive integer. \n");
@@ -37,7 +38,7 @@ Vector* vector_create(int capacity)
     return v;
 }
 
-Vector* vector_from_array(MultiType* array, int size) 
+Vector* vector_from_array(MultiType* array, int size)
 {
     Vector* v = vector_create(size);
     v->size = size;
@@ -45,9 +46,9 @@ Vector* vector_from_array(MultiType* array, int size)
     return v;
 }
 
-void vector_push(Vector* v, MultiType elem) 
+void vector_push(Vector* v, MultiType elem)
 {
-    if (v->size == v->capacity) 
+    if (v->size == v->capacity)
         vector_resize(v, v->capacity * VECTOR_GROWTH_FACTOR);
 
     v->array[v->size++] = elem;
@@ -55,35 +56,34 @@ void vector_push(Vector* v, MultiType elem)
 
 void vector_extend(Vector* v, Vector* other)
 {
-    for (int i = 0; i < other->size; i++) 
-        vector_push(v, other->array[i]);
-        
+    for (int i = 0; i < other->size; i++) vector_push(v, other->array[i]);
+
     vector_free(other);
 }
 
-MultiType vector_pop(Vector* v) 
+MultiType vector_pop(Vector* v)
 {
     if (v->size == 0) {
         fprintf(stderr, "Vector is empty\n");
         exit(EXIT_FAILURE);
     }
     MultiType elem = v->array[--v->size];
-    
+
     if (v->capacity > VECTOR_GROWTH_FACTOR * v->size)
         vector_resize(v, ceil(v->capacity / VECTOR_GROWTH_FACTOR));
 
     return elem;
 }
 
-void vector_print(Vector* v) 
+void vector_print(Vector* v)
 {
     printf("[");
-    for (int i = 0; i < v->size; i++) 
+    for (int i = 0; i < v->size; i++)
         printf("%s, ", multi_to_string(v->array[i]));
     printf("]\n");
 }
 
-void vector_free(Vector* v) 
+void vector_free(Vector* v)
 {
     free(v->array);
     free(v);

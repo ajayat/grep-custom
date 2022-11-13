@@ -3,11 +3,12 @@
 
 #include <stdbool.h>
 
-#include "vector.h"
 #include "hashtable.h"
 #include "multitype.h"
+#include "vector.h"
 
 extern const char EPSILON;
+extern const char ALPHABET[];
 
 /**
  * Deterministic Finite Automaton
@@ -15,7 +16,7 @@ extern const char EPSILON;
 typedef struct DFA {
     MultiType initial;
     Set* final;
-    HashTable* _transitions; // (state -> letter -> state)
+    HashTable* _transitions;  // (state -> letter -> state)
 } DFA;
 
 extern DFA* dfa_create(MultiType initial);
@@ -26,7 +27,7 @@ extern MultiType dfa_delta(DFA* dfa, MultiType state, char a);
 
 extern bool dfa_accept(DFA* dfa, char* word);
 
-extern void dfa_free(DFA* dfa);
+extern void dfa_free(DFA* dfa, bool deep);
 
 /**
  * Non-deterministic Finite Automaton with epsilon transitions
@@ -34,7 +35,7 @@ extern void dfa_free(DFA* dfa);
 typedef struct NFA {
     Set* initial;
     Set* final;
-    HashTable* _transitions; // (state -> letter -> Set of state)
+    HashTable* _transitions;  // (state -> letter -> Set of state)
 } NFA;
 
 extern NFA* nfa_create(void);
@@ -45,8 +46,10 @@ extern Set* nfa_delta(NFA* nfa, MultiType state, char a);
 
 extern bool nfa_accept(NFA* nfa, char* word);
 
-extern void nfa_free(NFA* nfa);
+extern void nfa_free(NFA* nfa, bool deep);
 
-extern DFA* auto_occurrences(char* pattern);
+extern NFA* dfa_transpose(DFA* dfa);
 
-#endif // AUTOMATON_H
+extern DFA* nfa_determinize(NFA* nfa);
+
+#endif  // AUTOMATON_H

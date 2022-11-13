@@ -30,4 +30,4 @@ void vector_print(Vector* v);
 
 void vector_free(Vector* v);
 
-#endif // VECTOR_H
+#endif  // VECTOR_H

@@ -1,7 +1,8 @@
 from typing import TextIO, List
 import sys
 
-from automaton import AutoOccurrences
+from .core.parser import parse
+from .core.algorithm import thompson, brzozowski
 
 
 def mygrep(pattern: str, text: TextIO) -> None:
@@ -12,7 +13,13 @@ def mygrep(pattern: str, text: TextIO) -> None:
         pattern: la chaîne à chercher
         text: le texte à lire
     """
-    pass
+    ast = parse(pattern)
+    nfa = thompson(ast)
+    dfa = brzozowski(nfa.determinize())
+
+    for line in text:
+        if dfa.accept(line.rstrip('\n')):
+            print(line.rstrip('\n'))
 
 
 def main(argc: int, argv: List[str]) -> None:
@@ -26,7 +33,3 @@ def main(argc: int, argv: List[str]) -> None:
         mygrep(argv[1], sys.stdin)
     else:
         print("Usage: mygrep.py <pattern> <file>")
-
-
-if __name__ == "__main__":
-    main(len(sys.argv), sys.argv)
