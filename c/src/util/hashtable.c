@@ -48,12 +48,19 @@ static int hash_htbl(int capacity, Set* set)
             case StringType:
                 n += hash_string(capacity, keys->array[i].value.s);
                 break;
+            case HtblType:
             case PointerType:
                 n += (unsigned long int)keys->array[i].value.p;
                 break;
+            default:
+                goto InvalidKeyType;
         }
     vector_free(keys);
     return n % capacity;
+
+InvalidKeyType:
+    fprintf(stderr, "Key cannot be hashed due to invalid key type.\n");
+    exit(EXIT_FAILURE);
 }
 
 static int bucket(int capacity, MultiType key)

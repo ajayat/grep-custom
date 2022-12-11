@@ -4,7 +4,6 @@ import string
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
-
 State = Union[str, int]
 
 EPSILON: str = str()  # représente le mot vide

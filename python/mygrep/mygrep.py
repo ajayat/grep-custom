@@ -14,6 +14,7 @@ def mygrep(pattern: str, text: TextIO) -> None:
         text: le texte à lire
     """
     ast = parse(pattern)
+    ast.print()
     nfa = thompson(ast)
     dfa = brzozowski(nfa.determinize())
 

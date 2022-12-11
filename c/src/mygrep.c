@@ -8,7 +8,7 @@
 
 int main(int argc, char* argv[])
 {
-    AST* ast = parse("ab@*");
+    AST* ast = parse(".*ab@*@c@");
     NFA* nfa = thompson(ast);
     ast_free(ast);
     DFA* dfa = brzozowski(nfa_determinize(nfa));

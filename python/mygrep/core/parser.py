@@ -1,4 +1,3 @@
-import string
 from dataclasses import dataclass
 
 from .automaton import EPSILON, ALPHABET
@@ -12,6 +11,17 @@ class AST:
 
     def __repr__(self):
         return f"AST({self.tag}, {self.childs})"
+
+    def print(self, indent=0):
+        """
+        Prints a pretty AST representation
+        """
+        print("  " * indent, self.tag)
+        if self.tag == "CharGroup":
+            print("  " * (indent + 1), "".join(self.childs))
+        else:
+            for child in self.childs:
+                child.print(indent + 1)
 
 
 def parse(regex: str) -> AST:

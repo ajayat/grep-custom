@@ -40,6 +40,8 @@ extern Vector *hashtable_to_vector(HashTable *h);
 
 extern HashTable *hashtable_copy(HashTable *h);
 
+extern bool hashtable_is_equal(HashTable *h, HashTable *other);
+
 extern void hashtable_update(HashTable *h, HashTable *other);
 
 extern void hashtable_print(HashTable *h);

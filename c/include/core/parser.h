@@ -5,18 +5,27 @@
 
 typedef enum ASTTag { CharGroup, Concat, Union, Star } ASTTag;
 
+static const char *const AST_TAG_STR[] = {
+    [CharGroup] = "CharGroup",
+    [Concat] = "Concat",
+    [Union] = "Union",
+    [Star] = "Star",
+};
+
 typedef struct AST {
     enum ASTTag tag;
-    Vector *childs;
+    int arity;
+    union {
+        char *c;         // CharGroup
+        struct AST **a;  // Concat, Union, Star
+    } childs;
 } AST;
 
-extern AST *ast_create(ASTTag tag, int argc, ...);
-
-extern AST *ast_nth_child(AST *ast, int n);
-
-extern char ast_leaf_child(AST *ast, int n);
+extern AST *ast_create(ASTTag tag, int arity, int argc, ...);
 
 extern void ast_free(AST *ast);
+
+extern void ast_print(AST *ast, int indent);
 
 extern AST *parse(char *regex);
 

@@ -6,121 +6,110 @@
 #include <string.h>  // strlen
 
 #include "automaton.h"
+#include "stack.h"
 #include "vector.h"
 
-AST *ast_create(ASTTag tag, int argc, ...)
+AST *ast_create(ASTTag tag, int arity, int argc, ...)
 {
     AST *ast = (AST *)malloc(sizeof(AST));
     ast->tag = tag;
-    ast->childs = vector_create(2);
+    ast->arity = arity;
+    if (tag == CharGroup)
+        ast->childs.c = calloc(arity, sizeof(char));
+    else
+        ast->childs.a = calloc(arity, sizeof(AST *));
 
     va_list args;
     va_start(args, argc);
     switch (tag) {
         case CharGroup:
             for (int i = 0; i < argc; i++)
-                vector_push(ast->childs, multi_char(va_arg(args, char)));
+                ast->childs.c[0] = va_arg(args, int);
             break;
         case Star:
-            vector_push(ast->childs, multi_pointer(va_arg(args, AST *)));
+            ast->childs.a[0] = va_arg(args, AST *);
             break;
         case Concat:
         case Union:
-            vector_push(ast->childs, multi_pointer(va_arg(args, AST *)));
-            vector_push(ast->childs, multi_pointer(va_arg(args, AST *)));
+            ast->childs.a[0] = va_arg(args, AST *);
+            ast->childs.a[1] = va_arg(args, AST *);
             break;
     }
     va_end(args);
     return ast;
 }
 
-AST *ast_nth_child(AST *ast, int n)
-{
-    if (n < 0 || n >= ast->childs->size)
-        goto InvalidSize;
-
-    MultiType child = ast->childs->array[n];
-    if (child.type != PointerType)
-        goto InvalidChild;
-
-    return (AST *)child.value.p;
-
-InvalidSize:
-    printf("%dth child does not exists\n", n);
-    exit(EXIT_FAILURE);
-InvalidChild:
-    printf("%dth child is not an AST\n", n);
-    exit(EXIT_FAILURE);
-}
-
-char ast_leaf_child(AST *ast, int n)
-{
-    if (ast->tag != CharGroup) {
-        puts("AST does not have a Char tag.");
-        exit(EXIT_FAILURE);
-    }
-    return ast->childs->array[n].value.c;
-}
-
 void ast_free(AST *ast)
 {
-    Vector *stack = vector_create(2);
-    vector_push(stack, multi_pointer(ast));
-
-    while (stack->size > 0) {
-        AST *ast = (AST *)vector_pop(stack).value.p;
-        if (ast->tag == CharGroup)
-            continue;
-        for (int i = 0; i < ast->childs->size; i++)
-            vector_push(stack, multi_pointer(ast_nth_child(ast, i)));
-        free(ast->childs);
-        free(ast);
+    if (ast->tag == CharGroup)
+        free(ast->childs.c);
+    else {
+        for (int i = 0; i < ast->arity; i++)
+            ast_free(ast->childs.a[i]);
+        free(ast->childs.a);
     }
-    free(stack);
+}
+
+void ast_print(AST *ast, int indent)
+{
+    for (int i = 0; i < indent; i++)
+        printf("  ");
+    printf("%s\n", AST_TAG_STR[ast->tag]);
+
+    if (ast->tag == CharGroup) {
+        for (int i = 0; i < indent + 1; i++)
+            printf("  ");
+        for (int i = 0; i < ast->arity; i++)
+            printf("%c", ast->childs.c[i]);
+        printf("\n");
+    } else {
+        for (int i = 0; i < ast->arity; i++)
+            ast_print(ast->childs.a[i], indent + 1);
+    }
 }
 
 /* Constructs an AST from a regex in postfixe form */
 AST *parse(char *regex)
 {
-    Vector *stack = vector_create(strlen(regex));
+    Stack *stack = stack_create();
 
     for (int i = 0; regex[i] != '\0'; i++) {
         AST *ast;
         switch (regex[i]) {
             case '@': {
-                AST *right = (AST *)vector_pop(stack).value.p;
-                AST *left = (AST *)vector_pop(stack).value.p;
-                ast = ast_create(Concat, 2, left, right);
+                AST *right = (AST *)stack_pop(stack).value.p;
+                AST *left = (AST *)stack_pop(stack).value.p;
+                ast = ast_create(Concat, 2, 2, left, right);
                 break;
             }
             case '*': {
-                AST *child = (AST *)vector_pop(stack).value.p;
-                ast = ast_create(Star, 1, child);
+                AST *child = (AST *)stack_pop(stack).value.p;
+                ast = ast_create(Star, 1, 1, child);
                 break;
             }
             case '.': {
-                ast = ast_create(CharGroup, 0);
-                for (int i = 0; i < strlen(ALPHABET); i++)
-                    vector_push(ast->childs, multi_char(ALPHABET[i]));
+                ast = ast_create(CharGroup, strlen(ALPHABET), 0);
+                for (int i = 0; i < ast->arity; i++)
+                    ast->childs.c[i] = ALPHABET[i];
                 break;
             }
             case '|': {
-                AST *right = (AST *)vector_pop(stack).value.p;
-                AST *left = (AST *)vector_pop(stack).value.p;
-                ast = ast_create(Union, 2, left, right);
+                AST *right = (AST *)stack_pop(stack).value.p;
+                AST *left = (AST *)stack_pop(stack).value.p;
+                ast = ast_create(Union, 2, 2, left, right);
                 break;
             }
             case '?': {
-                AST *child = (AST *)vector_pop(stack).value.p;
-                ast = ast_create(Union, 2, EPSILON, child);
+                AST *child = (AST *)stack_pop(stack).value.p;
+                ast = ast_create(Union, 2, 2, EPSILON, child);
                 break;
             }
             default:
-                ast = ast_create(CharGroup, 1, regex[i]);
+                ast = ast_create(CharGroup, 1, 1, regex[i]);
         }
-        vector_push(stack, multi_pointer(ast));
+        stack_push(stack, multi_pointer(ast));
     }
-    AST *ast = (AST *)vector_pop(stack).value.p;
-    vector_free(stack);
+    AST *ast = (AST *)stack_pop(stack).value.p;
+    stack_free(stack);
     return ast;
 }

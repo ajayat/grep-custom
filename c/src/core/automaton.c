@@ -188,7 +188,7 @@ DFA* nfa_determinize(NFA* nfa)
         if (nfa_is_final(nfa, (Set*)state.value.p))
             hashtable_set(dfa->final, state, state);
 
-        for (int i = 0; i < strlen(ALPHABET); i++) {
+        for (int i = 0; i < (int)strlen(ALPHABET); i++) {
             Set* p = nfa_delta_states(nfa, (Set*)state.value.p, ALPHABET[i]);
             if (!hashtable_contains(nfa->_transitions, multi_htbl(p)))
                 vector_push(stack, multi_htbl(p));

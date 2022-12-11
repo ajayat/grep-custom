@@ -96,9 +96,6 @@ inline MultiType multi_pointer(void* p)
 
 void multi_free(MultiType m)
 {
-    switch (m.type) {
-        case HtblType:
-            hashtable_free(m.value.p, true);
-            break;
-    }
+    if (m.type == HtblType)
+        hashtable_free(m.value.p, true);
 }

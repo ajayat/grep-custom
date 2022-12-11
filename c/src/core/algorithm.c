@@ -1,6 +1,8 @@
 #include "algorithm.h"
 
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "automaton.h"
 #include "parser.h"
@@ -20,32 +22,32 @@ DFA *brzozowski(DFA *dfa)
 NFA *thompson(AST *ast)
 {
     static int state = 0;
-    NFA *nfa;
 
     switch (ast->tag) {
         case CharGroup: {
-            nfa = nfa_create();
+            NFA *nfa = nfa_create();
             MultiType init = multi_int(state++), final = multi_int(state++);
             nfa->initial = hashtable_create(2);
             hashtable_set(nfa->initial, init, init);
             nfa->final = hashtable_create(2);
             hashtable_set(nfa->final, final, final);
 
-            for (int i = 0; i < ast->childs->size; i++)
-                nfa_set_transition(nfa, init, ast_leaf_child(ast, i), final);
+            for (int i = 0; i < ast->arity; i++)
+                nfa_set_transition(nfa, init, ast->childs.c[i], final);
+            return nfa;
         }
         case Union: {
-            nfa = thompson(ast_nth_child(ast, 0));
-            NFA *nfa2 = thompson(ast_nth_child(ast, 1));
+            NFA *nfa = thompson(ast->childs.a[0]);
+            NFA *nfa2 = thompson(ast->childs.a[1]);
             hashtable_update(nfa->_transitions, nfa2->_transitions);
             hashtable_update(nfa->initial, nfa2->initial);
             hashtable_update(nfa->final, nfa2->final);
             nfa_free(nfa2, false);
+            return nfa;
         }
         case Concat: {
-            nfa = thompson(ast_nth_child(ast, 0));
-            NFA *nfa2 = thompson(ast_nth_child(ast, 1));
-            hashtable_update(nfa->_transitions, nfa2->_transitions);
+            NFA *nfa = thompson(ast->childs.a[0]);
+            NFA *nfa2 = thompson(ast->childs.a[1]);
 
             Vector *final = hashtable_to_vector(nfa->final);
             for (int i = 0; i < final->size; i++) {
@@ -59,9 +61,10 @@ NFA *thompson(AST *ast)
             vector_free(final);
             nfa->final = nfa2->final;
             nfa_free(nfa2, false);
+            return nfa;
         }
         case Star: {
-            nfa = thompson(ast_nth_child(ast, 0));
+            NFA *nfa = thompson(ast->childs.a[0]);
 
             Vector *final = hashtable_to_vector(nfa->final);
             for (int i = 0; i < final->size; i++) {
@@ -76,7 +79,10 @@ NFA *thompson(AST *ast)
                 vector_free(initial);
             }
             vector_free(final);
+            return nfa;
         }
+        default:
+            fprintf(stderr, "Invalid AST tag");
+            exit(EXIT_FAILURE);
     }
-    return nfa;
 }
