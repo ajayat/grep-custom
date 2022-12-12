@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "multitype.h"
+#include "stack.h"
 #include "vector.h"
 
 extern const float HASHTABLE_LOAD_FACTOR;

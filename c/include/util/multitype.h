@@ -22,8 +22,6 @@ extern const MultiType MULTI_NULL;
 
 extern bool multi_is_equal(MultiType m1, MultiType m2);
 
-extern char* multi_to_string(MultiType m);
-
 extern MultiType multi_int(int object);
 
 extern MultiType multi_char(char object);
@@ -33,6 +31,8 @@ extern MultiType multi_string(char* object);
 extern MultiType multi_htbl(void* object);
 
 extern MultiType multi_pointer(void* object);
+
+extern void multi_print(MultiType m, char* begin, char* end);
 
 extern void multi_free(MultiType m);
 

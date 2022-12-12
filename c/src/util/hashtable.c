@@ -14,6 +14,7 @@
 #include <string.h>  // strcmp, strlen
 
 #include "multitype.h"
+#include "stack.h"
 #include "vector.h"
 
 const float HASHTABLE_LOAD_FACTOR = 0.75;
@@ -69,7 +70,7 @@ static int bucket(int capacity, MultiType key)
         case IntType:
             return hash_int(capacity, key.value.i);
         case CharType:
-            return hash_int(capacity, (int)key.value.c);
+            return (int)key.value.c % capacity;
         case StringType:
             return hash_string(capacity, key.value.s);
         case HtblType:
@@ -86,7 +87,6 @@ static Entry* find_entry(Entry* entry, MultiType key)
 {
     while (entry != NULL && !multi_is_equal(entry->key, key))
         entry = entry->next;
-
     return entry;
 }
 
@@ -147,18 +147,26 @@ HashTable* hashtable_create(int capacity)
 
 MultiType hashtable_get(HashTable* h, MultiType key)
 {
-    Entry* entry = find_entry(h->array[bucket(h->capacity, key)], key);
+    int b = bucket(h->capacity, key);
+    Entry* entry = find_entry(h->array[b], key);
     return (entry == NULL) ? MULTI_NULL : entry->value;
 }
 
 HashTable* hashtable_get_or_create(HashTable* h, MultiType key)
 {
     MultiType entry = hashtable_get(h, key);
-    if (entry.type == NullType) {
-        entry.value.p = hashtable_create(2);
-        hashtable_set(h, key, entry);
+    switch (entry.type) {
+        case NullType: {
+            HashTable* new_htbl = hashtable_create(2);
+            hashtable_set(h, key, multi_htbl(new_htbl));
+            return new_htbl;
+        }
+        case HtblType:
+            return (HashTable*)entry.value.p;
+        default:
+            fprintf(stderr, "Key does not map to a hashtable.\n");
+            exit(EXIT_FAILURE);
     }
-    return (HashTable*)entry.value.p;
 }
 
 void hashtable_set(HashTable* h, MultiType key, MultiType value)
@@ -217,13 +225,18 @@ void hashtable_update(HashTable* h, HashTable* other)
 
 void hashtable_print(HashTable* h)
 {
-    puts("{");
-    for (int i = 0; i < h->capacity; i++) {
-        for (Entry* e = h->array[i]; e != NULL; e = e->next)
-            printf("  %s: %s;\n", multi_to_string(e->key),
-                   multi_to_string(e->value));
+    if (h->size == 0)
+        puts("{}");
+    else {
+        puts("{");
+        for (int i = 0; i < h->capacity; i++) {
+            for (Entry* e = h->array[i]; e != NULL; e = e->next) {
+                multi_print(e->key, "  ", ": ");
+                multi_print(e->value, "", ";\n");
+            }
+        }
+        puts("}");
     }
-    puts("}");
 }
 
 /* Performs a shallow copy */

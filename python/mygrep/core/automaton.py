@@ -82,14 +82,12 @@ class NFA:
     def _delta_star(self, states: Set[State], u: str) -> Set[State]:
         for c in u:
             states = self._delta_states(states, c)
-            print(states)
         return states
 
     def _is_final(self, states: Set[State]) -> bool:
         return any(q in self.final for q in states)
 
     def accept(self, u: str) -> bool:
-        print(self.initial)
         states = self._delta_star(self._epsilon_closure(self.initial), u)
         return self._is_final(states)
 

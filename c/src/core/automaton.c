@@ -102,7 +102,7 @@ void nfa_set_transition(NFA* nfa, MultiType state, char a, MultiType p)
     HashTable* h = hashtable_get_or_create(nfa->_transitions, state);
     Set* states = hashtable_get_or_create(h, multi_char(a));
     hashtable_set(states, p, p);
-    hashtable_set(h, multi_char(a), multi_pointer(states));
+    hashtable_set(h, multi_char(a), multi_htbl(states));
 }
 
 Set* nfa_delta(NFA* nfa, MultiType state, char a)
@@ -121,11 +121,16 @@ static Set* nfa_epsilon_closure(NFA* nfa, Set* states)
 
     while (stack->size > 0) {
         MultiType q = vector_pop(stack);
-        if (!hashtable_contains(closure, q))
+        if (hashtable_contains(closure, q))
             continue;
 
         hashtable_set(closure, q, q);
-        vector_extend(stack, hashtable_to_vector(nfa_delta(nfa, q, EPSILON)));
+        Set* q_closure = nfa_delta(nfa, q, EPSILON);
+        for (int b = 0; b < q_closure->capacity; b++) {
+            for (Entry* e = q_closure->array[b]; e != NULL; e = e->next)
+                vector_push(stack, e->key);
+        }
+        hashtable_free(q_closure, false);
     }
     vector_free(stack);
     return closure;
@@ -134,13 +139,15 @@ static Set* nfa_epsilon_closure(NFA* nfa, Set* states)
 static Set* nfa_delta_states(NFA* nfa, Set* states, char a)
 {
     Set* next_states = hashtable_create(HT_INIT_SIZE);
-    Vector* v_states = hashtable_to_vector(states);
 
-    for (int i = 0; i < states->size; i++)
-        hashtable_update(next_states, nfa_delta(nfa, v_states->array[i], a));
-
+    for (int b = 0; b < states->capacity; b++) {
+        for (Entry* e = states->array[b]; e != NULL; e = e->next) {
+            if (e->key.type == NullType)
+                continue;
+            hashtable_update(next_states, nfa_delta(nfa, e->key, a));
+        }
+    }
     Set* closure = nfa_epsilon_closure(nfa, next_states);
-    vector_free(v_states);
     hashtable_free(next_states, false);
     return closure;
 }
@@ -157,22 +164,20 @@ static Set* nfa_delta_star(NFA* nfa, Set* states, char* u)
 
 bool nfa_is_final(NFA* nfa, Set* states)
 {
-    bool is_final = false;
-    Vector* v_states = hashtable_to_vector(states);
-    for (int i = 0; i < states->size; i++) {
-        if (hashtable_contains(nfa->final, v_states->array[i]))
-            is_final = true;
+    for (int b = 0; b < states->capacity; b++) {
+        for (Entry* e = states->array[b]; e != NULL; e = e->next) {
+            if (hashtable_contains(nfa->final, e->key))
+                return true;
+        }
     }
-    vector_free(v_states);
-    return is_final;
+    return false;
 }
 
 bool nfa_accept(NFA* nfa, char* u)
 {
-    Set* initial_closure = nfa_epsilon_closure(nfa, nfa->initial);
-    Set* states = nfa_delta_star(nfa, initial_closure, u);
+    Set* states = nfa_epsilon_closure(nfa, nfa->initial);
+    states = nfa_delta_star(nfa, states, u);
     bool accept = nfa_is_final(nfa, states);
-    hashtable_free(initial_closure, false);
     hashtable_free(states, false);
     return accept;
 }

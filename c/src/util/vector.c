@@ -80,7 +80,7 @@ void vector_print(Vector *v)
 {
     printf("[");
     for (int i = 0; i < v->size; i++)
-        printf("%s, ", multi_to_string(v->array[i]));
+        multi_print(v->array[i], "", ", ");
     printf("]\n");
 }
 

@@ -53,7 +53,7 @@ void stack_print(Stack *stack)
 {
     printf("[");
     for (Node *e = stack->top; e != NULL; e = e->next)
-        printf("%s, ", multi_to_string(e->value));
+        multi_print(e->value, "", ", ");
     printf("]\n");
 }
 

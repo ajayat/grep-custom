@@ -39,36 +39,6 @@ InvalidType:
     exit(EXIT_FAILURE);
 }
 
-char* multi_to_string(MultiType m)
-{
-    switch (m.type) {
-        case IntType: {
-            static char buffer[21];  // 4-bytes integer can be 20 digits long
-            sprintf(buffer, "%d", m.value.i);
-            return buffer;
-        }
-        case CharType: {
-            static char buffer[2];  // 1 bit char + null terminator
-            sprintf(buffer, "%c", m.value.c);
-            return buffer;
-        }
-        case StringType:
-            return m.value.s;
-
-        case HtblType:
-        case PointerType: {
-            static char buffer[21];  // Pointer is a 8-bytes integer
-            sprintf(buffer, "%p", m.value.p);
-            return buffer;
-        }
-        default:
-            goto InvalidType;
-    }
-InvalidType:
-    fprintf(stderr, "MultiType value cannot be converted to string.\n");
-    exit(EXIT_FAILURE);
-}
-
 inline MultiType multi_int(int i)
 {
     return (MultiType){IntType, {.i = i}};
@@ -92,6 +62,28 @@ inline MultiType multi_htbl(void* p)
 inline MultiType multi_pointer(void* p)
 {
     return (MultiType){PointerType, {.p = p}};
+}
+
+void multi_print(MultiType m, char begin[], char end[])
+{
+    switch (m.type) {
+        case IntType:
+            printf("%s%d%s", begin, m.value.i, end);
+            break;
+        case CharType:
+            printf("%s%c%s", begin, m.value.c, end);
+            break;
+        case StringType:
+            printf("%s%s%s", begin, m.value.s, end);
+            break;
+        case HtblType:
+        case PointerType:
+            printf("%s%p%s", begin, m.value.p, end);
+            break;
+        default:
+            fprintf(stderr, "MultiType cannot be converted to string.\n");
+            exit(EXIT_FAILURE);
+    }
 }
 
 void multi_free(MultiType m)

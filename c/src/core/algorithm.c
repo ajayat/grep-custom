@@ -27,9 +27,7 @@ NFA *thompson(AST *ast)
         case CharGroup: {
             NFA *nfa = nfa_create();
             MultiType init = multi_int(state++), final = multi_int(state++);
-            nfa->initial = hashtable_create(2);
             hashtable_set(nfa->initial, init, init);
-            nfa->final = hashtable_create(2);
             hashtable_set(nfa->final, final, final);
 
             for (int i = 0; i < ast->arity; i++)
